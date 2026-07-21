@@ -1,5 +1,5 @@
 /* ==========================================================================
-   CYBER-STUDIO MTV BROADCAST SYSTEM - UNIQUE DESIGN SYSTEM
+   CYBER-STUDIO MTV BROADCAST SYSTEM - UNIQUE DESIGN SYSTEM (V2)
    ========================================================================== */
 
 :root {
@@ -49,8 +49,43 @@ body {
     width: 100vw;
 }
 
+/* TOAST NOTIFICATION CONTAINER */
+.toast-container {
+    position: fixed;
+    top: 80px;
+    right: 30px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+}
+
+.cyber-toast {
+    background: rgba(18, 19, 28, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--cyber-cyan);
+    border-left: 4px solid var(--cyber-magenta);
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: var(--radius-sm);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.8), 0 0 15px rgba(0, 240, 255, 0.2);
+    font-family: var(--font-cyber);
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    animation: toastIn 0.3s ease-out forwards;
+    pointer-events: auto;
+}
+
+@keyframes toastIn {
+    from { opacity: 0; transform: translateX(50px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
 /* ==========================================================================
-   1. TOP BROADCAST HEADER (ON AIR CONSOLE & AUTH SESSION)
+   1. TOP BROADCAST HEADER (SEARCH & AUTH)
    ========================================================================== */
 .studio-header {
     height: 70px;
@@ -106,6 +141,44 @@ body {
     font-family: var(--font-mono);
 }
 
+/* HEADER SEARCH BAR */
+.header-search-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background-color: rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--border-cyber);
+    padding: 8px 16px;
+    border-radius: 20px;
+    width: 320px;
+    transition: all 0.3s ease;
+}
+
+.header-search-box i {
+    color: var(--cyber-cyan);
+    font-size: 0.9rem;
+}
+
+.header-search-box input {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #fff;
+    font-family: var(--font-cyber);
+    font-size: 0.85rem;
+    width: 100%;
+}
+
+.header-search-box input::placeholder {
+    color: var(--text-muted);
+}
+
+.header-search-box:focus-within {
+    border-color: var(--cyber-magenta);
+    box-shadow: 0 0 15px rgba(255, 0, 85, 0.4);
+    width: 380px;
+}
+
 /* ON AIR INDICATOR */
 .on-air-indicator {
     display: flex;
@@ -141,11 +214,6 @@ body {
 }
 
 /* AUTH HEADER BADGES */
-.auth-header-pill {
-    display: flex;
-    align-items: center;
-}
-
 .user-session-badge {
     display: flex;
     align-items: center;
@@ -684,6 +752,10 @@ body {
 
 .btn-tool:hover {
     background-color: rgba(0, 240, 255, 0.2);
+}
+
+.btn-tool.liked i {
+    color: var(--cyber-magenta);
 }
 
 .vis-selector {

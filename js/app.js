@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MAIN APPLICATION SPA CONTROLLER (AUTHENTICATION INTEGRATION)
+   MAIN APPLICATION SPA CONTROLLER (LIVE SEARCH, TOASTS & LIKE SYSTEM)
    ========================================================================== */
 
 class App {
@@ -9,6 +9,7 @@ class App {
         this.visualizer = null;
         this.player = null;
         this.bandModule = null;
+        this.likedSongs = new Set(JSON.parse(localStorage.getItem('mtv_liked_songs')) || []);
     }
 
     async init() {
@@ -25,6 +26,8 @@ class App {
             this.renderBands();
             this.initNavigation();
             this.initAuthUI();
+            this.initGlobalSearch();
+            this.initLikeButton();
             this.initLiveClock();
             this.initVisualizerSelector();
             this.initAdminForm();
@@ -37,10 +40,142 @@ class App {
                 this.player.loadStation(stations[0].id);
             }
 
-            console.log("Cyber-MTV Broadcast Platform con Autenticación Cifrada activada.");
+            console.log("Cyber-MTV Broadcast Platform v2 Ready.");
         } catch (e) {
             console.error("Error al inicializar la plataforma:", e);
         }
+    }
+
+    showToast(message, type = 'info') {
+        const container = document.getElementById('cyber-toast-container');
+        if (!container) return;
+
+        const toast = document.createElement('div');
+        toast.className = 'cyber-toast';
+        
+        let icon = '<i class="fa-solid fa-circle-info" style="color:var(--cyber-cyan);"></i>';
+        if (type === 'success') icon = '<i class="fa-solid fa-circle-check" style="color:var(--cyber-green);"></i>';
+        if (type === 'like') icon = '<i class="fa-solid fa-heart" style="color:var(--cyber-magenta);"></i>';
+
+        toast.innerHTML = `${icon} <span>${message}</span>`;
+        container.appendChild(toast);
+
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(50px)';
+            setTimeout(() => toast.remove(), 300);
+        }, 3500);
+    }
+
+    initLikeButton() {
+        const likeBtn = document.getElementById('btn-like-song');
+        const iconHeart = document.getElementById('icon-like-heart');
+        const lblCount = document.getElementById('lbl-like-count');
+
+        if (!likeBtn) return;
+
+        likeBtn.addEventListener('click', () => {
+            const currentTrack = this.player.currentTrack;
+            if (!currentTrack) return;
+
+            const songId = currentTrack.id;
+            if (this.likedSongs.has(songId)) {
+                this.likedSongs.delete(songId);
+                likeBtn.classList.remove('liked');
+                iconHeart.className = 'fa-regular fa-heart';
+                this.showToast(`Has quitado "${currentTrack.title}" de tus favoritos.`);
+            } else {
+                this.likedSongs.add(songId);
+                likeBtn.classList.add('liked');
+                iconHeart.className = 'fa-solid fa-heart';
+                this.showToast(`¡"${currentTrack.title}" añadida a tus favoritos!`, 'like');
+            }
+
+            localStorage.setItem('mtv_liked_songs', JSON.stringify(Array.from(this.likedSongs)));
+            lblCount.textContent = this.likedSongs.has(songId) ? '1' : '0';
+        });
+    }
+
+    initGlobalSearch() {
+        const searchInput = document.getElementById('global-search-input');
+        if (!searchInput) return;
+
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase().trim();
+            this.filterContentBySearch(query);
+        });
+    }
+
+    async filterContentBySearch(query) {
+        if (!query) {
+            this.renderBands();
+            return;
+        }
+
+        this.switchView('bands-view');
+        const bandsGrid = document.getElementById('bands-grid');
+        if (!bandsGrid) return;
+
+        const allBands = await this.db.getAll('bands');
+        const allSongs = await this.db.getAll('songs');
+
+        const filteredBands = allBands.filter(b => {
+            const bandMatch = b.name.toLowerCase().includes(query) || (b.genre && b.genre.toLowerCase().includes(query));
+            const songMatch = allSongs.some(s => s.bandId === b.id && s.title.toLowerCase().includes(query));
+            return bandMatch || songMatch;
+        });
+
+        bandsGrid.innerHTML = '';
+
+        if (filteredBands.length === 0) {
+            bandsGrid.innerHTML = `
+                <div style="grid-column: 1/-1; text-align:center; padding: 40px; color: var(--text-muted);">
+                    <i class="fa-solid fa-magnifying-glass" style="font-size: 3rem; margin-bottom: 12px; color:var(--cyber-magenta);"></i>
+                    <p>No se encontraron resultados para "${query}".</p>
+                </div>
+            `;
+            return;
+        }
+
+        filteredBands.forEach(band => {
+            const bandSongs = allSongs.filter(s => s.bandId === band.id);
+            const card = document.createElement('div');
+            card.className = 'band-card';
+            
+            const songsHtml = bandSongs.map(s => `
+                <div class="band-track-item" data-song-id="${s.id}" data-station-id="${s.stationId}">
+                    <span><i class="fa-solid fa-circle-play" style="color:var(--cyber-cyan);"></i> ${s.title}</span>
+                    ${s.videoUrl || s.videoBlob ? '<span style="font-size:0.65rem; background:var(--cyber-magenta); color:#fff; padding:1px 4px;">VIDEO</span>' : ''}
+                </div>
+            `).join('');
+
+            card.innerHTML = `
+                <div class="band-card-header">
+                    <img class="band-avatar" src="${band.cover || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=200&q=80'}" alt="${band.name}">
+                    <div>
+                        <h3 style="font-size:1.05rem; font-weight:800;">${band.name}</h3>
+                        <span style="font-size:0.75rem; color:var(--cyber-cyan); font-family:var(--font-mono);">${band.genre}</span>
+                    </div>
+                </div>
+                <p style="font-size:0.85rem; color:var(--text-dim); margin-bottom:12px; line-height:1.4;">${band.bio || 'Banda independiente en la red de videoclips MTV.'}</p>
+                <div style="margin-top:auto;">
+                    <strong style="font-size:0.7rem; font-family:var(--font-mono); color:var(--cyber-gold); display:block; margin-bottom:4px;">VIDEOCLIPS & CANCIONES:</strong>
+                    ${songsHtml}
+                </div>
+            `;
+
+            card.querySelectorAll('.band-track-item').forEach(trackEl => {
+                trackEl.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const songId = trackEl.getAttribute('data-song-id');
+                    const stId = trackEl.getAttribute('data-station-id');
+                    this.switchView('mtv-view');
+                    this.player.loadStation(stId, songId);
+                });
+            });
+
+            bandsGrid.appendChild(card);
+        });
     }
 
     initAuthUI() {
@@ -60,7 +195,7 @@ class App {
         logoutBtn?.addEventListener('click', () => {
             this.auth.logout();
             this.updateAuthSessionUI();
-            alert("Has cerrado sesión.");
+            this.showToast("Has cerrado sesión.");
         });
 
         // Tabs Toggle
@@ -90,7 +225,7 @@ class App {
                 if (res.success) {
                     if (modal) modal.style.display = 'none';
                     this.updateAuthSessionUI();
-                    alert(`⚡ Bienvenido/a ${res.user.name} (Rol: ${res.user.role.toUpperCase()})`);
+                    this.showToast(`Bienvenido/a ${res.user.name} (Rol: ${res.user.role.toUpperCase()})`, 'success');
                 }
             });
         });
@@ -106,9 +241,9 @@ class App {
                 if (modal) modal.style.display = 'none';
                 formLogin.reset();
                 this.updateAuthSessionUI();
-                alert(`👋 Bienvenido de vuelta, ${res.user.name}`);
+                this.showToast(`Bienvenido de vuelta, ${res.user.name}`, 'success');
             } else {
-                alert("❌ Error: " + res.message);
+                this.showToast("❌ " + res.message);
             }
         });
 
@@ -125,7 +260,7 @@ class App {
                 if (modal) modal.style.display = 'none';
                 formRegister.reset();
                 this.updateAuthSessionUI();
-                alert(`🎉 ¡Cuenta creada con éxito! Tu contraseña se ha cifrado mediante SHA-256. Rol: ${role.toUpperCase()}`);
+                this.showToast(`¡Cuenta creada! Contraseña cifrada en SHA-256 (Rol: ${role.toUpperCase()})`, 'success');
             }
         });
     }
@@ -141,14 +276,11 @@ class App {
         const headerQuickReg = document.getElementById('btn-quick-register');
         const adminNavBtn = document.getElementById('nav-btn-admin');
 
-        const roleSelect = document.getElementById('role-select');
-
         if (user) {
             if (loggedBadge) loggedBadge.style.display = 'flex';
             if (openAuthBtn) openAuthBtn.style.display = 'none';
             if (headerEmail) headerEmail.textContent = user.email;
             if (headerRole) headerRole.textContent = user.role.toUpperCase();
-            if (roleSelect) roleSelect.value = user.role;
 
             if (user.role === 'admin') {
                 if (navRegisterBtn) navRegisterBtn.style.display = 'flex';
@@ -327,7 +459,6 @@ class App {
         }
     }
 
-    /* ADMIN DASHBOARD */
     async renderAdminDashboard() {
         const bandsTable = document.getElementById('admin-bands-table-body');
         const songsTable = document.getElementById('admin-songs-table-body');
@@ -417,6 +548,7 @@ class App {
             this.renderAdminDashboard();
             this.renderBands();
             this.renderStations();
+            this.showToast("Banda eliminada correctamente.");
         };
     }
 
@@ -427,6 +559,7 @@ class App {
             this.renderAdminDashboard();
             this.renderBands();
             this.renderStations();
+            this.showToast("Canción eliminada correctamente.");
         };
     }
 
@@ -450,7 +583,7 @@ class App {
             };
 
             await this.db.put('stations', newStation);
-            alert(`Estación "${name}" creada exitosamente.`);
+            this.showToast(`Estación "${name}" creada exitosamente.`, 'success');
             adminForm.reset();
             
             await this.bandModule.populateStationDropdowns();
