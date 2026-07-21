@@ -1,5 +1,5 @@
 /* ==========================================================================
-   PERSISTENCIA HÍBRIDA: SUPABASE POSTGRESQL CLOUD + INDEXEDDB FALLBACK
+   PERSISTENCIA HÍBRIDA: SUPABASE POSTGRESQL CLOUD + INDEXEDDB MIGRATOR
    ========================================================================== */
 
 const DB_NAME = 'SpotifyMTVDB';
@@ -16,10 +16,7 @@ class StationDB {
 
             request.onupgradeneeded = (event) => {
                 const db = event.target.result;
-                
-                if (!db.objectStoreNames.contains('stations')) {
-                    db.createObjectStore('stations', { keyPath: 'id' });
-                }
+                if (!db.objectStoreNames.contains('stations')) db.createObjectStore('stations', { keyPath: 'id' });
                 if (!db.objectStoreNames.contains('bands')) {
                     const bandStore = db.createObjectStore('bands', { keyPath: 'id' });
                     bandStore.createIndex('stationId', 'stationId', { unique: false });
@@ -34,6 +31,7 @@ class StationDB {
             request.onsuccess = async (event) => {
                 this.db = event.target.result;
                 await this.seedDefaultDataIfEmpty();
+                await this.syncLocalToSupabase();
                 resolve(this.db);
             };
 
@@ -44,8 +42,46 @@ class StationDB {
         });
     }
 
+    // SUBIR TODAS LAS BANDAS Y CANCIONES DE INDEXEDDB A SUPABASE
+    async syncLocalToSupabase() {
+        if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+            try {
+                const localBands = await this.getAllLocal('bands');
+                for (const b of localBands) {
+                    await supabaseClient.from('bands').upsert({
+                        id: b.id,
+                        name: b.name,
+                        genre: b.genre,
+                        station_id: b.stationId,
+                        bio: b.bio,
+                        cover: b.cover || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&q=80',
+                        instagram: b.instagram || '@banda'
+                    });
+                }
+
+                const localSongs = await this.getAllLocal('songs');
+                for (const s of localSongs) {
+                    await supabaseClient.from('songs').upsert({
+                        id: s.id,
+                        band_id: s.bandId,
+                        band_name: s.bandName,
+                        title: s.title,
+                        album: s.album || 'Single',
+                        station_id: s.stationId,
+                        audio_url: s.audioUrl || 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+                        video_url: s.videoUrl || null,
+                        cover: s.cover || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&q=80',
+                        year: s.year || 2026
+                    });
+                }
+                console.log("⚡ Sincronizadas todas las bandas y canciones creadas localmente hacia Supabase PostgreSQL.");
+            } catch (err) {
+                console.warn("Error en la sincronización con Supabase:", err);
+            }
+        }
+    }
+
     async seedDefaultDataIfEmpty() {
-        // 1. Seed local IndexedDB first
         const localStations = await this.getAllLocal('stations');
         if (localStations.length === 0) {
             console.log("Cargando datos demostrativos iniciales...");
@@ -157,52 +193,6 @@ class StationDB {
 
             for (const sg of defaultSongs) await this.putLocal('songs', sg);
         }
-
-        // 2. Sync to Supabase PostgreSQL Cloud if connected
-        if (typeof supabaseClient !== 'undefined' && supabaseClient) {
-            try {
-                // Check if Supabase bands table is empty
-                const { data: supaBands } = await supabaseClient.from('bands').select('*');
-                if (!supaBands || supaBands.length === 0) {
-                    console.log("Sincronizando bandas iniciales a Supabase PostgreSQL...");
-                    const localBands = await this.getAllLocal('bands');
-                    for (const b of localBands) {
-                        await supabaseClient.from('bands').upsert({
-                            id: b.id,
-                            name: b.name,
-                            genre: b.genre,
-                            station_id: b.stationId,
-                            bio: b.bio,
-                            cover: b.cover,
-                            instagram: b.instagram
-                        });
-                    }
-                }
-
-                // Check if Supabase songs table is empty
-                const { data: supaSongs } = await supabaseClient.from('songs').select('*');
-                if (!supaSongs || supaSongs.length === 0) {
-                    console.log("Sincronizando canciones iniciales a Supabase PostgreSQL...");
-                    const localSongs = await this.getAllLocal('songs');
-                    for (const s of localSongs) {
-                        await supabaseClient.from('songs').upsert({
-                            id: s.id,
-                            band_id: s.bandId,
-                            band_name: s.bandName,
-                            title: s.title,
-                            album: s.album,
-                            station_id: s.stationId,
-                            audio_url: s.audioUrl || 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
-                            video_url: s.videoUrl,
-                            cover: s.cover,
-                            year: s.year || 2026
-                        });
-                    }
-                }
-            } catch (err) {
-                console.warn("Supabase Sync warning:", err);
-            }
-        }
     }
 
     async createSynthesizedAudioTrack(style) {
@@ -275,23 +265,18 @@ class StationDB {
     }
 
     async getAll(storeName) {
-        // Try Supabase Cloud first, fallback to IndexedDB
         if (typeof supabaseClient !== 'undefined' && supabaseClient) {
             try {
-                const tableName = storeName;
-                const { data, error } = await supabaseClient.from(tableName).select('*');
+                const { data, error } = await supabaseClient.from(storeName).select('*');
                 if (!error && data && data.length > 0) {
-                    // Map column names if needed
-                    return data.map(item => {
-                        return {
-                            ...item,
-                            stationId: item.station_id || item.stationId,
-                            bandId: item.band_id || item.bandId,
-                            bandName: item.band_name || item.bandName,
-                            audioUrl: item.audio_url || item.audioUrl,
-                            videoUrl: item.video_url || item.videoUrl
-                        };
-                    });
+                    return data.map(item => ({
+                        ...item,
+                        stationId: item.station_id || item.stationId,
+                        bandId: item.band_id || item.bandId,
+                        bandName: item.band_name || item.bandName,
+                        audioUrl: item.audio_url || item.audioUrl,
+                        videoUrl: item.video_url || item.videoUrl
+                    }));
                 }
             } catch (err) {
                 console.warn("Supabase fetch fallback to local DB:", err);
@@ -301,10 +286,8 @@ class StationDB {
     }
 
     async put(storeName, value) {
-        // Put in local IndexedDB
         await this.putLocal(storeName, value);
 
-        // Put in Supabase Cloud
         if (typeof supabaseClient !== 'undefined' && supabaseClient) {
             try {
                 if (storeName === 'bands') {
@@ -314,8 +297,8 @@ class StationDB {
                         genre: value.genre,
                         station_id: value.stationId,
                         bio: value.bio,
-                        cover: value.cover,
-                        instagram: value.instagram
+                        cover: value.cover || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&q=80',
+                        instagram: value.instagram || '@banda'
                     });
                 } else if (storeName === 'songs') {
                     await supabaseClient.from('songs').upsert({
@@ -323,11 +306,11 @@ class StationDB {
                         band_id: value.bandId,
                         band_name: value.bandName,
                         title: value.title,
-                        album: value.album,
+                        album: value.album || 'Single',
                         station_id: value.stationId,
                         audio_url: value.audioUrl || 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
-                        video_url: value.videoUrl,
-                        cover: value.cover,
+                        video_url: value.videoUrl || null,
+                        cover: value.cover || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&q=80',
                         year: value.year || 2026
                     });
                 } else if (storeName === 'stations') {
