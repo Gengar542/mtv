@@ -1,35 +1,79 @@
 -- ==========================================================================
--- SCRIPT DE ACTUALIZACIÓN RLS Y DATOS INICIALES PARA SUPABASE
--- Ejecuta este script en tu Supabase SQL Editor:
--- Dashboard > SQL Editor > New Query > Paste & Run
+-- SCRIPT DE CONFIGURACIÓN SUPABASE POSTGRESQL PARA CYBER-MTV PLATFORM
+-- (CON TABLA DE USUARIOS Y CONTRASEÑAS CIFRADAS EN SHA-256)
 -- ==========================================================================
 
--- 1. ASEGURAR PERMISOS RLS DE INSERT Y UPDATE EN SUPABASE
-DROP POLICY IF EXISTS "Escritura pública de estaciones" ON public.stations;
-DROP POLICY IF EXISTS "Escritura pública de bandas" ON public.bands;
-DROP POLICY IF EXISTS "Escritura pública de canciones" ON public.songs;
+-- 1. TABLA DE USUARIOS (CON CONTRASEÑAS CIFRADAS HASH)
+CREATE TABLE IF NOT EXISTS public.users (
+    id TEXT PRIMARY KEY,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    role TEXT NOT NULL CHECK (role IN ('oyente', 'banda', 'admin')),
+    name TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
 
-CREATE POLICY "Escritura pública de estaciones" ON public.stations FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Escritura pública de bandas" ON public.bands FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Escritura pública de canciones" ON public.songs FOR ALL USING (true) WITH CHECK (true);
+-- 2. TABLA DE ESTACIONES DE RADIO
+CREATE TABLE IF NOT EXISTS public.stations (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    genre TEXT NOT NULL,
+    description TEXT,
+    cover TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
 
--- 2. INSERTAR ESTACIONES INICIALES EN SUPABASE
-INSERT INTO public.stations (id, name, genre, description, cover) VALUES
-('rock-indie', 'MTV Rock Independiente', 'Indie Rock / Post-Punk', 'Videoclips en vivo, riffs distorsionados y rock garajero independiente.', 'https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=600&q=80'),
-('synthwave-cyber', 'Synthwave & Cyberpunk TV', 'Synthwave / Retro Electro', 'Videoclips con estética ochentera, luces de neón y carreras de autos futuristas.', 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=600&q=80'),
-('pop-latino-indie', 'Pop Alternativo & Funk', 'Indie Pop / Funk', 'Videoclips llenos de color, ritmos bañados por el sol y grooves bailables.', 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&q=80')
-ON CONFLICT (id) DO NOTHING;
+-- 3. TABLA DE BANDAS INSCRITAS
+CREATE TABLE IF NOT EXISTS public.bands (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    genre TEXT NOT NULL,
+    station_id TEXT REFERENCES public.stations(id) ON DELETE SET NULL,
+    bio TEXT,
+    cover TEXT,
+    instagram TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
 
--- 3. INSERTAR BANDAS INICIALES EN SUPABASE
-INSERT INTO public.bands (id, name, genre, station_id, bio, cover, instagram) VALUES
-('band-1', 'Los Transistores Neón', 'Indie Rock / Post-Punk', 'rock-indie', 'Banda independiente con videoclips cargados de estética analógica y conciertos en directo.', 'https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=400&q=80', '@lostransistoresneon'),
-('band-2', 'CyberDrive 1984', 'Synthwave / Retro Electro', 'synthwave-cyber', 'Dúo electrónico pionero en la realización de videoclips generados con estética Cyberpunk 3D.', 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&q=80', '@cyberdrive84'),
-('band-3', 'Luna & El Sabor Solar', 'Indie Pop / Funk', 'pop-latino-indie', 'Grupo groove famoso por sus videoclips llenos de baile y actuaciones en clubes nocturnos.', 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&q=80', '@lunayasaborsolar')
-ON CONFLICT (id) DO NOTHING;
+-- 4. TABLA DE CANCIONES Y VIDEOCLIPS
+CREATE TABLE IF NOT EXISTS public.songs (
+    id TEXT PRIMARY KEY,
+    band_id TEXT REFERENCES public.bands(id) ON DELETE CASCADE,
+    band_name TEXT,
+    title TEXT NOT NULL,
+    album TEXT,
+    station_id TEXT REFERENCES public.stations(id) ON DELETE CASCADE,
+    audio_url TEXT NOT NULL,
+    video_url TEXT,
+    cover TEXT,
+    year INT DEFAULT 2026,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
 
--- 4. INSERTAR CANCIONES Y VIDEOCLIPS INICIALES EN SUPABASE
-INSERT INTO public.songs (id, band_id, band_name, title, album, station_id, audio_url, video_url, cover, year) VALUES
-('song-1', 'band-1', 'Los Transistores Neón', 'Fuego en el Amplificador', 'Distorsión Nocturna EP', 'rock-indie', 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', 'https://assets.mixkit.co/videos/preview/mixkit-hands-playing-an-electric-guitar-41582-large.mp4', 'https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=400&q=80', 2026),
-('song-2', 'band-2', 'CyberDrive 1984', 'Carretera Nocturna a 120 BPM', 'Neon Horizon', 'synthwave-cyber', 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3', 'https://assets.mixkit.co/videos/preview/mixkit-dj-mixing-music-at-a-nightclub-42410-large.mp4', 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&q=80', 2026),
-('song-3', 'band-3', 'Luna & El Sabor Solar', 'Viernes Bajo las Estrellas', 'Atardecer Funk', 'pop-latino-indie', 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3', 'https://assets.mixkit.co/videos/preview/mixkit-concert-crowd-raising-their-hands-41584-large.mp4', 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&q=80', 2026)
+-- PERMISOS RLS CON INSERCIÓN HABILITADA
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.stations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.bands ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.songs ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Permiso usuarios" ON public.users;
+CREATE POLICY "Permiso usuarios" ON public.users FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Permiso estaciones" ON public.stations;
+CREATE POLICY "Permiso estaciones" ON public.stations FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Permiso bandas" ON public.bands;
+CREATE POLICY "Permiso bandas" ON public.bands FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Permiso canciones" ON public.songs;
+CREATE POLICY "Permiso canciones" ON public.songs FOR ALL USING (true) WITH CHECK (true);
+
+-- 5. USUARIOS INICIALES PRECARGADOS (CONTRASEÑAS CIFRADAS EN SHA-256)
+-- admin@mtv.com / admin -> Hash SHA-256: 8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918
+-- banda@mtv.com / banda123 -> Hash SHA-256: 80509653835697658c27cf9487c95e1e1a5332f1434cfa7ef9ecdd268b812f8e
+-- oyente@mtv.com / oyente123 -> Hash SHA-256: c7e2c9ef895690b20be8e02d6b38c2013f41249767fa668ef7321e0ca65463f2
+INSERT INTO public.users (id, email, password_hash, role, name) VALUES
+('user-admin-1', 'admin@mtv.com', '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918', 'admin', 'Director Admin MTV'),
+('user-banda-1', 'banda@mtv.com', '80509653835697658c27cf9487c95e1e1a5332f1434cfa7ef9ecdd268b812f8e', 'banda', 'Banda Músico Demo'),
+('user-oyente-1', 'oyente@mtv.com', 'c7e2c9ef895690b20be8e02d6b38c2013f41249767fa668ef7321e0ca65463f2', 'oyente', 'Usuario Oyente Demo')
 ON CONFLICT (id) DO NOTHING;

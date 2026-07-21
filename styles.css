@@ -50,7 +50,7 @@ body {
 }
 
 /* ==========================================================================
-   1. TOP BROADCAST HEADER (ON AIR CONSOLE & ROLE SWITCHER)
+   1. TOP BROADCAST HEADER (ON AIR CONSOLE & AUTH SESSION)
    ========================================================================== */
 .studio-header {
     height: 70px;
@@ -140,31 +140,44 @@ body {
     letter-spacing: 1.5px;
 }
 
-/* ROLE SWITCHER */
-.user-role-switcher {
+/* AUTH HEADER BADGES */
+.auth-header-pill {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-family: var(--font-mono);
-    font-size: 0.85rem;
-    color: var(--cyber-gold);
-    background-color: rgba(0, 0, 0, 0.4);
-    padding: 4px 12px;
-    border-radius: var(--radius-sm);
-    border: 1px solid rgba(255, 215, 0, 0.3);
 }
 
-.role-dropdown {
-    background-color: #12131C;
-    border: 1px solid var(--cyber-gold);
-    color: #fff;
-    padding: 6px 12px;
-    font-family: var(--font-cyber);
+.user-session-badge {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background-color: rgba(0, 240, 255, 0.1);
+    border: 1px solid var(--cyber-cyan);
+    padding: 6px 14px;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
     font-size: 0.85rem;
-    font-weight: 700;
-    outline: none;
+}
+
+.badge-role {
+    background-color: var(--cyber-cyan);
+    color: #000;
+    font-weight: 900;
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border-radius: 2px;
+}
+
+.btn-logout-icon {
+    background: transparent;
+    border: none;
+    color: var(--cyber-magenta);
     cursor: pointer;
-    border-radius: 4px;
+    font-size: 1rem;
+    margin-left: 6px;
+}
+
+.btn-logout-icon:hover {
+    transform: scale(1.15);
 }
 
 .header-tools {
@@ -931,7 +944,7 @@ body {
 }
 
 /* ==========================================================================
-   5. BAND REGISTRATION FORM (JPG + VIDEOCLIP)
+   5. BAND REGISTRATION FORM
    ========================================================================== */
 .register-studio-card {
     max-width: 960px;
@@ -1096,7 +1109,149 @@ body {
 }
 
 /* ==========================================================================
-   6. ADMIN CONTROL PANEL DASHBOARD (MODO DIRECTOR MTV)
+   6. AUTH MODAL SYSTEM (LOGIN & REGISTER)
+   ========================================================================== */
+.auth-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(12px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s ease;
+}
+
+.auth-modal-card {
+    width: 440px;
+    max-width: 90%;
+    background-color: var(--bg-panel);
+    border: 2px solid var(--border-cyber);
+    border-radius: var(--radius-lg);
+    padding: 32px;
+    position: relative;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9), var(--border-glow);
+}
+
+.auth-close-btn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+
+.auth-close-btn:hover {
+    color: var(--cyber-magenta);
+}
+
+.auth-tabs-header {
+    display: flex;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 24px;
+}
+
+.auth-tab-btn {
+    flex: 1;
+    padding: 12px;
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    font-family: var(--font-cyber);
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.auth-tab-btn.active {
+    color: var(--cyber-cyan);
+    border-bottom: 3px solid var(--cyber-cyan);
+    background-color: rgba(0, 240, 255, 0.05);
+}
+
+.auth-form {
+    display: none;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.auth-form.active {
+    display: flex;
+}
+
+.auth-form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.auth-form-field label {
+    font-size: 0.8rem;
+    font-family: var(--font-mono);
+    color: var(--text-dim);
+}
+
+.auth-form-field input,
+.auth-form-field select {
+    background-color: #12131C;
+    border: 1px solid var(--border-cyber);
+    padding: 12px;
+    color: #fff;
+    font-family: inherit;
+    font-size: 0.9rem;
+    border-radius: 4px;
+    outline: none;
+}
+
+.auth-form-field input:focus,
+.auth-form-field select:focus {
+    border-color: var(--cyber-magenta);
+    box-shadow: 0 0 10px rgba(255, 0, 85, 0.4);
+}
+
+.demo-logins-box {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.1);
+    text-align: center;
+}
+
+.demo-logins-box small {
+    color: var(--cyber-gold);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.demo-buttons-row {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+}
+
+.btn-demo-login {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-cyber);
+    color: #fff;
+    padding: 4px 10px;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.btn-demo-login:hover {
+    background-color: rgba(0, 240, 255, 0.2);
+}
+
+/* ==========================================================================
+   7. ADMIN CONTROL PANEL DASHBOARD
    ========================================================================== */
 .admin-dashboard-wrapper {
     display: flex;
@@ -1244,7 +1399,7 @@ body {
 }
 
 /* ==========================================================================
-   7. PERSISTENT PLAYER DECK
+   8. PERSISTENT PLAYER DECK
    ========================================================================== */
 .studio-player-deck {
     height: 75px;

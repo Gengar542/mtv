@@ -29,14 +29,17 @@
             <span class="on-air-text">ON AIR // TRANSMITIENDO</span>
         </div>
 
-        <!-- SELECTOR DE ROL DE USUARIO: OYENTE VS BANDA VS ADMIN -->
-        <div class="user-role-switcher">
-            <label for="role-select"><i class="fa-solid fa-user-gear"></i> Rol Actual:</label>
-            <select id="role-select" class="role-dropdown">
-                <option value="oyente" selected>🎧 Rol: Oyente / Espectador (Solo Música)</option>
-                <option value="banda">🎸 Rol: Banda / Músico (Subir Canciones)</option>
-                <option value="admin">⚡ Rol: Director Admin (MTV Control)</option>
-            </select>
+        <!-- USUARIO AUTENTICADO / LOGIN HEADER -->
+        <div class="auth-header-pill">
+            <div id="user-logged-badge" class="user-session-badge" style="display:none;">
+                <i class="fa-solid fa-user-check"></i>
+                <span id="header-user-email">admin@mtv.com</span>
+                <span id="header-role-badge" class="badge-role">ADMIN</span>
+                <button id="btn-logout" class="btn-logout-icon" title="Cerrar Sesión"><i class="fa-solid fa-right-from-bracket"></i></button>
+            </div>
+            <button id="btn-open-auth-modal" class="btn btn-cyber-outline">
+                <i class="fa-solid fa-user-lock"></i> INICIAR SESIÓN / REGISTRO
+            </button>
         </div>
 
         <div class="header-tools">
@@ -92,7 +95,7 @@
                 </div>
                 <div class="gauge-info">
                     <span>AUDIO HD // VIDEO 1080p</span>
-                    <span id="live-clock">15:59:00</span>
+                    <span id="live-clock">16:13:00</span>
                 </div>
             </div>
         </aside>
@@ -472,6 +475,68 @@
         </div>
     </footer>
 
+    <!-- MODAL DE AUTENTICACIÓN: LOGIN & REGISTRO -->
+    <div class="auth-modal-overlay" id="auth-modal" style="display:none;">
+        <div class="auth-modal-card">
+            <button class="auth-close-btn" id="btn-close-auth"><i class="fa-solid fa-xmark"></i></button>
+            
+            <div class="auth-tabs-header">
+                <button class="auth-tab-btn active" id="tab-btn-login">INICIAR SESIÓN</button>
+                <button class="auth-tab-btn" id="tab-btn-register">CREAR CUENTA</button>
+            </div>
+
+            <!-- FORMULARIO 1: LOGIN -->
+            <form id="form-login" class="auth-form active">
+                <div class="auth-form-field">
+                    <label for="login-email"><i class="fa-solid fa-envelope"></i> Correo Electrónico</label>
+                    <input type="email" id="login-email" required placeholder="admin@mtv.com / banda@mtv.com">
+                </div>
+                <div class="auth-form-field">
+                    <label for="login-password"><i class="fa-solid fa-lock"></i> Contraseña</label>
+                    <input type="password" id="login-password" required placeholder="••••••••">
+                </div>
+                <button type="submit" class="btn btn-cyber-primary btn-xl" style="width:100%; margin-top:10px;">
+                    <i class="fa-solid fa-right-to-bracket"></i> INGRESAR AL ESTUDIO
+                </button>
+                
+                <div class="demo-logins-box">
+                    <small>Cuentas de prueba precargadas:</small>
+                    <div class="demo-buttons-row">
+                        <button type="button" class="btn-demo-login" data-email="admin@mtv.com" data-pass="admin">⚡ Admin</button>
+                        <button type="button" class="btn-demo-login" data-email="banda@mtv.com" data-pass="banda123">🎸 Banda</button>
+                        <button type="button" class="btn-demo-login" data-email="oyente@mtv.com" data-pass="oyente123">🎧 Oyente</button>
+                    </div>
+                </div>
+            </form>
+
+            <!-- FORMULARIO 2: REGISTRO -->
+            <form id="form-register" class="auth-form">
+                <div class="auth-form-field">
+                    <label for="reg-name"><i class="fa-solid fa-user"></i> Nombre / Nombre de Banda</label>
+                    <input type="text" id="reg-name" required placeholder="Ej: Los Neón Vanguardia">
+                </div>
+                <div class="auth-form-field">
+                    <label for="reg-email"><i class="fa-solid fa-envelope"></i> Correo Electrónico</label>
+                    <input type="email" id="reg-email" required placeholder="tuemail@ejemplo.com">
+                </div>
+                <div class="auth-form-field">
+                    <label for="reg-password"><i class="fa-solid fa-lock"></i> Contraseña (Guardada Cifrada en SHA-256)</label>
+                    <input type="password" id="reg-password" required placeholder="Mínimo 6 caracteres">
+                </div>
+                <div class="auth-form-field">
+                    <label for="reg-role"><i class="fa-solid fa-user-gear"></i> Tipo de Cuenta</label>
+                    <select id="reg-role" required>
+                        <option value="oyente">🎧 Oyente Normal (Solo Música y Videoclips)</option>
+                        <option value="banda">🎸 Banda / Músico (Subir Música, Fotos JPG y Videoclips)</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-cyber-primary btn-xl" style="width:100%; margin-top:10px;">
+                    <i class="fa-solid fa-user-plus"></i> CREAR CUENTA CIFRADA
+                </button>
+            </form>
+        </div>
+    </div>
+
     <!-- Elemento Audio oculto -->
     <audio id="audio-engine" crossorigin="anonymous"></audio>
 
@@ -479,6 +544,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabaseClient.js"></script>
     <script src="js/db.js"></script>
+    <script src="js/auth.js"></script>
     <script src="js/visualizer.js"></script>
     <script src="js/mtvPlayer.js"></script>
     <script src="js/bandRegistration.js"></script>

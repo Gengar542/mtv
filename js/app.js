@@ -1,14 +1,14 @@
 /* ==========================================================================
-   MAIN APPLICATION SPA CONTROLLER (3 USER ROLES: OYENTE, BANDA, ADMIN)
+   MAIN APPLICATION SPA CONTROLLER (AUTHENTICATION INTEGRATION)
    ========================================================================== */
 
 class App {
     constructor() {
         this.db = dbManager;
+        this.auth = authEngine;
         this.visualizer = null;
         this.player = null;
         this.bandModule = null;
-        this.currentRole = 'oyente'; // 'oyente' | 'banda' | 'admin'
     }
 
     async init() {
@@ -24,69 +24,151 @@ class App {
             this.renderStations();
             this.renderBands();
             this.initNavigation();
-            this.initRoleSwitcher();
+            this.initAuthUI();
             this.initLiveClock();
             this.initVisualizerSelector();
             this.initAdminForm();
 
-            // Set initial role UI state
-            this.applyRoleState('oyente');
+            // Refresh Session State
+            this.updateAuthSessionUI();
 
             const stations = await this.db.getAll('stations');
             if (stations.length > 0) {
                 this.player.loadStation(stations[0].id);
             }
 
-            console.log("Cyber-MTV Broadcast Studio con 3 Roles (Oyente, Banda, Admin) activado.");
+            console.log("Cyber-MTV Broadcast Platform con Autenticación Cifrada activada.");
         } catch (e) {
             console.error("Error al inicializar la plataforma:", e);
         }
     }
 
-    initRoleSwitcher() {
-        const roleSelect = document.getElementById('role-select');
-        if (roleSelect) {
-            roleSelect.addEventListener('change', (e) => {
-                const newRole = e.target.value;
-                this.applyRoleState(newRole);
+    initAuthUI() {
+        const modal = document.getElementById('auth-modal');
+        const openBtn = document.getElementById('btn-open-auth-modal');
+        const closeBtn = document.getElementById('btn-close-auth');
+        const logoutBtn = document.getElementById('btn-logout');
+
+        const tabLogin = document.getElementById('tab-btn-login');
+        const tabRegister = document.getElementById('tab-btn-register');
+        const formLogin = document.getElementById('form-login');
+        const formRegister = document.getElementById('form-register');
+
+        // Modal Toggles
+        openBtn?.addEventListener('click', () => { if (modal) modal.style.display = 'flex'; });
+        closeBtn?.addEventListener('click', () => { if (modal) modal.style.display = 'none'; });
+        logoutBtn?.addEventListener('click', () => {
+            this.auth.logout();
+            this.updateAuthSessionUI();
+            alert("Has cerrado sesión.");
+        });
+
+        // Tabs Toggle
+        tabLogin?.addEventListener('click', () => {
+            tabLogin.classList.add('active');
+            tabRegister.classList.remove('active');
+            formLogin.classList.add('active');
+            formRegister.classList.remove('active');
+        });
+
+        tabRegister?.addEventListener('click', () => {
+            tabRegister.classList.add('active');
+            tabLogin.classList.remove('active');
+            formRegister.classList.add('active');
+            formLogin.classList.remove('active');
+        });
+
+        // Demo Quick Logins
+        document.querySelectorAll('.btn-demo-login').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const email = btn.getAttribute('data-email');
+                const pass = btn.getAttribute('data-pass');
+                document.getElementById('login-email').value = email;
+                document.getElementById('login-password').value = pass;
+                
+                const res = await this.auth.login(email, pass);
+                if (res.success) {
+                    if (modal) modal.style.display = 'none';
+                    this.updateAuthSessionUI();
+                    alert(`⚡ Bienvenido/a ${res.user.name} (Rol: ${res.user.role.toUpperCase()})`);
+                }
             });
-        }
+        });
+
+        // Login Form Submit
+        formLogin?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const pass = document.getElementById('login-password').value;
+            
+            const res = await this.auth.login(email, pass);
+            if (res.success) {
+                if (modal) modal.style.display = 'none';
+                formLogin.reset();
+                this.updateAuthSessionUI();
+                alert(`👋 Bienvenido de vuelta, ${res.user.name}`);
+            } else {
+                alert("❌ Error: " + res.message);
+            }
+        });
+
+        // Register Form Submit
+        formRegister?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('reg-name').value;
+            const email = document.getElementById('reg-email').value;
+            const pass = document.getElementById('reg-password').value;
+            const role = document.getElementById('reg-role').value;
+
+            const res = await this.auth.register(name, email, pass, role);
+            if (res.success) {
+                if (modal) modal.style.display = 'none';
+                formRegister.reset();
+                this.updateAuthSessionUI();
+                alert(`🎉 ¡Cuenta creada con éxito! Tu contraseña se ha cifrado mediante SHA-256. Rol: ${role.toUpperCase()}`);
+            }
+        });
     }
 
-    applyRoleState(role) {
-        this.currentRole = role;
+    updateAuthSessionUI() {
+        const user = this.auth.currentUser;
+        const loggedBadge = document.getElementById('user-logged-badge');
+        const openAuthBtn = document.getElementById('btn-open-auth-modal');
+        const headerEmail = document.getElementById('header-user-email');
+        const headerRole = document.getElementById('header-role-badge');
 
         const navRegisterBtn = document.getElementById('nav-btn-register');
         const headerQuickReg = document.getElementById('btn-quick-register');
         const adminNavBtn = document.getElementById('nav-btn-admin');
 
-        if (role === 'oyente') {
+        const roleSelect = document.getElementById('role-select');
+
+        if (user) {
+            if (loggedBadge) loggedBadge.style.display = 'flex';
+            if (openAuthBtn) openAuthBtn.style.display = 'none';
+            if (headerEmail) headerEmail.textContent = user.email;
+            if (headerRole) headerRole.textContent = user.role.toUpperCase();
+            if (roleSelect) roleSelect.value = user.role;
+
+            if (user.role === 'admin') {
+                if (navRegisterBtn) navRegisterBtn.style.display = 'flex';
+                if (headerQuickReg) headerQuickReg.style.display = 'inline-flex';
+                if (adminNavBtn) adminNavBtn.style.display = 'flex';
+            } else if (user.role === 'banda') {
+                if (navRegisterBtn) navRegisterBtn.style.display = 'flex';
+                if (headerQuickReg) headerQuickReg.style.display = 'inline-flex';
+                if (adminNavBtn) adminNavBtn.style.display = 'none';
+            } else {
+                if (navRegisterBtn) navRegisterBtn.style.display = 'none';
+                if (headerQuickReg) headerQuickReg.style.display = 'none';
+                if (adminNavBtn) adminNavBtn.style.display = 'none';
+            }
+        } else {
+            if (loggedBadge) loggedBadge.style.display = 'none';
+            if (openAuthBtn) openAuthBtn.style.display = 'inline-flex';
             if (navRegisterBtn) navRegisterBtn.style.display = 'none';
             if (headerQuickReg) headerQuickReg.style.display = 'none';
             if (adminNavBtn) adminNavBtn.style.display = 'none';
-
-            // If user was on register or admin view, send back to player view
-            const currentActiveView = document.querySelector('.view-section.active')?.id;
-            if (currentActiveView === 'register-view' || currentActiveView === 'admin-view') {
-                this.switchView('mtv-view');
-            }
-        } else if (role === 'banda') {
-            if (navRegisterBtn) navRegisterBtn.style.display = 'flex';
-            if (headerQuickReg) headerQuickReg.style.display = 'inline-flex';
-            if (adminNavBtn) adminNavBtn.style.display = 'none';
-            
-            const currentActiveView = document.querySelector('.view-section.active')?.id;
-            if (currentActiveView === 'admin-view') {
-                this.switchView('mtv-view');
-            }
-        } else if (role === 'admin') {
-            if (navRegisterBtn) navRegisterBtn.style.display = 'flex';
-            if (headerQuickReg) headerQuickReg.style.display = 'inline-flex';
-            if (adminNavBtn) adminNavBtn.style.display = 'flex';
-            
-            this.renderAdminDashboard();
-            this.switchView('admin-view');
-            alert("⚡ Modo Administrador Director MTV activado. Tienes acceso al Panel Director para supervisar todas las bandas y canciones.");
         }
     }
 
@@ -294,7 +376,7 @@ class App {
                 <td>${song.bandName || 'Banda'}</td>
                 <td>${song.album || 'Single'}</td>
                 <td>
-                    ${song.audioBlob ? '<span style="font-size:0.7rem; background:rgba(0,240,255,0.2); color:var(--cyber-cyan); padding:2px 6px; margin-right:4px;">AUDIO HD</span>' : ''}
+                    ${song.audioBlob || song.audioUrl ? '<span style="font-size:0.7rem; background:rgba(0,240,255,0.2); color:var(--cyber-cyan); padding:2px 6px; margin-right:4px;">AUDIO HD</span>' : ''}
                     ${hasVideo ? '<span style="font-size:0.7rem; background:var(--cyber-magenta); color:#fff; padding:2px 6px;">VIDEOCLIP MP4</span>' : ''}
                 </td>
                 <td>${stName}</td>
