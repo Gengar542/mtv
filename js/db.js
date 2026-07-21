@@ -1,9 +1,9 @@
 /* ==========================================================================
-   INDEXEDDB PERSISTENCE & SEED DATA ENGINE (VIDEOCLIP SUPPORT)
+   PERSISTENCIA HÍBRIDA: SUPABASE POSTGRESQL CLOUD + INDEXEDDB FALLBACK
    ========================================================================== */
 
 const DB_NAME = 'SpotifyMTVDB';
-const DB_VERSION = 2; // Incremented for Videoclip support
+const DB_VERSION = 2;
 
 class StationDB {
     constructor() {
@@ -20,12 +20,10 @@ class StationDB {
                 if (!db.objectStoreNames.contains('stations')) {
                     db.createObjectStore('stations', { keyPath: 'id' });
                 }
-                
                 if (!db.objectStoreNames.contains('bands')) {
                     const bandStore = db.createObjectStore('bands', { keyPath: 'id' });
                     bandStore.createIndex('stationId', 'stationId', { unique: false });
                 }
-
                 if (!db.objectStoreNames.contains('songs')) {
                     const songStore = db.createObjectStore('songs', { keyPath: 'id' });
                     songStore.createIndex('stationId', 'stationId', { unique: false });
@@ -47,15 +45,15 @@ class StationDB {
     }
 
     async seedDefaultDataIfEmpty() {
-        const stations = await this.getAll('stations');
-        if (stations.length === 0) {
-            console.log("Cargando estaciones y bandas con videoclips...");
+        // 1. Seed local IndexedDB first
+        const localStations = await this.getAllLocal('stations');
+        if (localStations.length === 0) {
+            console.log("Cargando datos demostrativos iniciales...");
 
             const audioBlob1 = await this.createSynthesizedAudioTrack('rock');
             const audioBlob2 = await this.createSynthesizedAudioTrack('synth');
             const audioBlob3 = await this.createSynthesizedAudioTrack('pop');
 
-            // Sample high-quality video loops for videoclip demonstration
             const sampleVideo1 = "https://assets.mixkit.co/videos/preview/mixkit-concert-crowd-raising-their-hands-41584-large.mp4";
             const sampleVideo2 = "https://assets.mixkit.co/videos/preview/mixkit-dj-mixing-music-at-a-nightclub-42410-large.mp4";
             const sampleVideo3 = "https://assets.mixkit.co/videos/preview/mixkit-hands-playing-an-electric-guitar-41582-large.mp4";
@@ -84,9 +82,7 @@ class StationDB {
                 }
             ];
 
-            for (const s of defaultStations) {
-                await this.put('stations', s);
-            }
+            for (const s of defaultStations) await this.putLocal('stations', s);
 
             const defaultBands = [
                 {
@@ -118,9 +114,7 @@ class StationDB {
                 }
             ];
 
-            for (const b of defaultBands) {
-                await this.put('bands', b);
-            }
+            for (const b of defaultBands) await this.putLocal('bands', b);
 
             const defaultSongs = [
                 {
@@ -131,7 +125,7 @@ class StationDB {
                     album: 'Distorsión Nocturna EP',
                     stationId: 'rock-indie',
                     audioBlob: audioBlob1,
-                    videoUrl: sampleVideo3, // REAL MUSIC VIDEO MP4
+                    videoUrl: sampleVideo3,
                     cover: 'https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=400&q=80',
                     year: 2026
                 },
@@ -143,7 +137,7 @@ class StationDB {
                     album: 'Neon Horizon',
                     stationId: 'synthwave-cyber',
                     audioBlob: audioBlob2,
-                    videoUrl: sampleVideo2, // REAL MUSIC VIDEO MP4
+                    videoUrl: sampleVideo2,
                     cover: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&q=80',
                     year: 2026
                 },
@@ -155,14 +149,58 @@ class StationDB {
                     album: 'Atardecer Funk',
                     stationId: 'pop-latino-indie',
                     audioBlob: audioBlob3,
-                    videoUrl: sampleVideo1, // REAL MUSIC VIDEO MP4
+                    videoUrl: sampleVideo1,
                     cover: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&q=80',
                     year: 2026
                 }
             ];
 
-            for (const sg of defaultSongs) {
-                await this.put('songs', sg);
+            for (const sg of defaultSongs) await this.putLocal('songs', sg);
+        }
+
+        // 2. Sync to Supabase PostgreSQL Cloud if connected
+        if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+            try {
+                // Check if Supabase bands table is empty
+                const { data: supaBands } = await supabaseClient.from('bands').select('*');
+                if (!supaBands || supaBands.length === 0) {
+                    console.log("Sincronizando bandas iniciales a Supabase PostgreSQL...");
+                    const localBands = await this.getAllLocal('bands');
+                    for (const b of localBands) {
+                        await supabaseClient.from('bands').upsert({
+                            id: b.id,
+                            name: b.name,
+                            genre: b.genre,
+                            station_id: b.stationId,
+                            bio: b.bio,
+                            cover: b.cover,
+                            instagram: b.instagram
+                        });
+                    }
+                }
+
+                // Check if Supabase songs table is empty
+                const { data: supaSongs } = await supabaseClient.from('songs').select('*');
+                if (!supaSongs || supaSongs.length === 0) {
+                    console.log("Sincronizando canciones iniciales a Supabase PostgreSQL...");
+                    const localSongs = await this.getAllLocal('songs');
+                    for (const s of localSongs) {
+                        await supabaseClient.from('songs').upsert({
+                            id: s.id,
+                            band_id: s.bandId,
+                            band_name: s.bandName,
+                            title: s.title,
+                            album: s.album,
+                            station_id: s.stationId,
+                            audio_url: s.audioUrl || 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+                            video_url: s.videoUrl,
+                            cover: s.cover,
+                            year: s.year || 2026
+                        });
+                    }
+                }
+            } catch (err) {
+                console.warn("Supabase Sync warning:", err);
             }
         }
     }
@@ -237,6 +275,82 @@ class StationDB {
     }
 
     async getAll(storeName) {
+        // Try Supabase Cloud first, fallback to IndexedDB
+        if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+            try {
+                const tableName = storeName;
+                const { data, error } = await supabaseClient.from(tableName).select('*');
+                if (!error && data && data.length > 0) {
+                    // Map column names if needed
+                    return data.map(item => {
+                        return {
+                            ...item,
+                            stationId: item.station_id || item.stationId,
+                            bandId: item.band_id || item.bandId,
+                            bandName: item.band_name || item.bandName,
+                            audioUrl: item.audio_url || item.audioUrl,
+                            videoUrl: item.video_url || item.videoUrl
+                        };
+                    });
+                }
+            } catch (err) {
+                console.warn("Supabase fetch fallback to local DB:", err);
+            }
+        }
+        return this.getAllLocal(storeName);
+    }
+
+    async put(storeName, value) {
+        // Put in local IndexedDB
+        await this.putLocal(storeName, value);
+
+        // Put in Supabase Cloud
+        if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+            try {
+                if (storeName === 'bands') {
+                    await supabaseClient.from('bands').upsert({
+                        id: value.id,
+                        name: value.name,
+                        genre: value.genre,
+                        station_id: value.stationId,
+                        bio: value.bio,
+                        cover: value.cover,
+                        instagram: value.instagram
+                    });
+                } else if (storeName === 'songs') {
+                    await supabaseClient.from('songs').upsert({
+                        id: value.id,
+                        band_id: value.bandId,
+                        band_name: value.bandName,
+                        title: value.title,
+                        album: value.album,
+                        station_id: value.stationId,
+                        audio_url: value.audioUrl || 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+                        video_url: value.videoUrl,
+                        cover: value.cover,
+                        year: value.year || 2026
+                    });
+                } else if (storeName === 'stations') {
+                    await supabaseClient.from('stations').upsert({
+                        id: value.id,
+                        name: value.name,
+                        genre: value.genre,
+                        description: value.description,
+                        cover: value.cover
+                    });
+                }
+            } catch (err) {
+                console.warn("Supabase upsert warning:", err);
+            }
+        }
+    }
+
+    async getSongsByStation(stationId) {
+        const allSongs = await this.getAll('songs');
+        return allSongs.filter(s => s.stationId === stationId);
+    }
+
+    async getAllLocal(storeName) {
         return new Promise((resolve, reject) => {
             const tx = this.db.transaction(storeName, 'readonly');
             const store = tx.objectStore(storeName);
@@ -246,22 +360,11 @@ class StationDB {
         });
     }
 
-    async put(storeName, value) {
+    async putLocal(storeName, value) {
         return new Promise((resolve, reject) => {
             const tx = this.db.transaction(storeName, 'readwrite');
             const store = tx.objectStore(storeName);
             const req = store.put(value);
-            req.onsuccess = () => resolve(req.result);
-            req.onerror = () => reject(req.error);
-        });
-    }
-
-    async getSongsByStation(stationId) {
-        return new Promise((resolve, reject) => {
-            const tx = this.db.transaction('songs', 'readonly');
-            const store = tx.objectStore('songs');
-            const index = store.index('stationId');
-            const req = index.getAll(stationId);
             req.onsuccess = () => resolve(req.result);
             req.onerror = () => reject(req.error);
         });
