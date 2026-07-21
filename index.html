@@ -29,23 +29,19 @@
             <span class="on-air-text">ON AIR // TRANSMITIENDO</span>
         </div>
 
-        <!-- USUARIO AUTENTICADO / LOGIN HEADER -->
-        <div class="auth-header-pill">
+        <!-- REEMPLAZO EXACTO EN LA ESQUINA SUPERIOR DERECHA CON REGISTRO / LOGIN -->
+        <div class="header-tools">
             <div id="user-logged-badge" class="user-session-badge" style="display:none;">
                 <i class="fa-solid fa-user-check"></i>
                 <span id="header-user-email">admin@mtv.com</span>
                 <span id="header-role-badge" class="badge-role">ADMIN</span>
                 <button id="btn-logout" class="btn-logout-icon" title="Cerrar Sesión"><i class="fa-solid fa-right-from-bracket"></i></button>
             </div>
-            <button id="btn-open-auth-modal" class="btn btn-cyber-outline">
+
+            <button id="btn-open-auth-modal" class="btn btn-cyber-primary" style="font-size:0.9rem; padding:12px 24px;">
                 <i class="fa-solid fa-user-lock"></i> INICIAR SESIÓN / REGISTRO
             </button>
-        </div>
 
-        <div class="header-tools">
-            <button class="btn btn-cyber-outline" id="btn-crt-toggle">
-                <i class="fa-solid fa-tv"></i> MODO RETRO CRT
-            </button>
             <button class="btn btn-cyber-primary" id="btn-quick-register" style="display:none;">
                 <i class="fa-solid fa-video"></i> SUBIR VIDEOCLIP
             </button>
@@ -95,8 +91,11 @@
                 </div>
                 <div class="gauge-info">
                     <span>AUDIO HD // VIDEO 1080p</span>
-                    <span id="live-clock">16:13:00</span>
+                    <span id="live-clock">16:19:00</span>
                 </div>
+                <button class="btn btn-cyber-outline btn-sm" id="btn-crt-toggle" style="margin-top:6px; width:100%; justify-content:center;">
+                    <i class="fa-solid fa-tv"></i> MODO RETRO CRT
+                </button>
             </div>
         </aside>
 
@@ -500,7 +499,7 @@
                 </button>
                 
                 <div class="demo-logins-box">
-                    <small>Cuentas de prueba precargadas:</small>
+                    <small>Cuentas de prueba precargadas (Haz clic para probar):</small>
                     <div class="demo-buttons-row">
                         <button type="button" class="btn-demo-login" data-email="admin@mtv.com" data-pass="admin">⚡ Admin</button>
                         <button type="button" class="btn-demo-login" data-email="banda@mtv.com" data-pass="banda123">🎸 Banda</button>
