@@ -65,7 +65,7 @@
                     <i class="fa-solid fa-photo-film"></i> DIRECTORIO Y VIDEOCLIPS
                 </button>
                 
-                <!-- BOTON DE REGISTRO BANDA (CONFIGURADO POR ROL) -->
+                <!-- BOTON DE REGISTRO BANDA -->
                 <button class="console-nav-btn btn-highlight" id="nav-btn-register" data-view="register-view" style="display:none;">
                     <i class="fa-solid fa-square-plus"></i> INSCRIBIR BANDA
                 </button>
@@ -92,7 +92,7 @@
                 </div>
                 <div class="gauge-info">
                     <span>AUDIO HD // VIDEO 1080p</span>
-                    <span id="live-clock">15:31:00</span>
+                    <span id="live-clock">15:59:00</span>
                 </div>
             </div>
         </aside>
@@ -475,7 +475,9 @@
     <!-- Elemento Audio oculto -->
     <audio id="audio-engine" crossorigin="anonymous"></audio>
 
-    <!-- Scripts JavaScript -->
+    <!-- Supabase JS Client SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabaseClient.js"></script>
     <script src="js/db.js"></script>
     <script src="js/visualizer.js"></script>
     <script src="js/mtvPlayer.js"></script>
