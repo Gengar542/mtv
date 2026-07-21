@@ -1,6 +1,11 @@
 # Dependencies
 node_modules/
 
+# Environment and Credentials
+.env
+.env.local
+.env.*
+
 # Logs
 *.log
 
