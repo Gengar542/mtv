@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CYBER-MTV BROADCAST | Studio Radio & Music Video Platform</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700;800&family=Montserrat:wght@400;700;900&family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet">
+    <!-- FontAwesome icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="theme-studio">
+
+    <!-- TOP BROADCAST HEADER (ON AIR CONSOLE) -->
+    <header class="studio-header">
+        <div class="studio-brand">
+            <div class="brand-badge-mtv">CYBER<span>MTV</span></div>
+            <div class="brand-title-box">
+                <span class="brand-main-title">ESTUDIO NACIONAL DE BANDAS</span>
+                <span class="brand-sub">Cadena de Emisión Independiente & Videoclips</span>
+            </div>
+        </div>
+
+        <div class="on-air-indicator">
+            <span class="on-air-lamp"></span>
+            <span class="on-air-text">ON AIR // TRANSMITIENDO</span>
+        </div>
+
+        <!-- SELECTOR DE ROL DE USUARIO: OYENTE VS BANDA VS ADMIN -->
+        <div class="user-role-switcher">
+            <label for="role-select"><i class="fa-solid fa-user-gear"></i> Rol Actual:</label>
+            <select id="role-select" class="role-dropdown">
+                <option value="oyente" selected>🎧 Rol: Oyente / Espectador (Solo Música)</option>
+                <option value="banda">🎸 Rol: Banda / Músico (Subir Canciones)</option>
+                <option value="admin">⚡ Rol: Director Admin (MTV Control)</option>
+            </select>
+        </div>
+
+        <div class="header-tools">
+            <button class="btn btn-cyber-outline" id="btn-crt-toggle">
+                <i class="fa-solid fa-tv"></i> MODO RETRO CRT
+            </button>
+            <button class="btn btn-cyber-primary" id="btn-quick-register" style="display:none;">
+                <i class="fa-solid fa-video"></i> SUBIR VIDEOCLIP
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN CONSOLE LAYOUT -->
+    <div class="studio-console-layout">
+
+        <!-- LEFT CONTROL PANEL / CHANNEL GUIDE -->
+        <aside class="console-sidebar">
+            <div class="console-nav">
+                <button class="console-nav-btn active" data-view="mtv-view">
+                    <i class="fa-solid fa-play"></i> MONITOR PRINCIPAL (MTV)
+                </button>
+                <button class="console-nav-btn" data-view="stations-view">
+                    <i class="fa-solid fa-tower-cell"></i> PARRILLA DE ESTACIONES
+                </button>
+                <button class="console-nav-btn" data-view="bands-view">
+                    <i class="fa-solid fa-photo-film"></i> DIRECTORIO Y VIDEOCLIPS
+                </button>
+                
+                <!-- BOTON DE REGISTRO BANDA (CONFIGURADO POR ROL) -->
+                <button class="console-nav-btn btn-highlight" id="nav-btn-register" data-view="register-view" style="display:none;">
+                    <i class="fa-solid fa-square-plus"></i> INSCRIBIR BANDA
+                </button>
+
+                <!-- PESTAÑA ADMIN -->
+                <button class="console-nav-btn btn-admin-tab" id="nav-btn-admin" data-view="admin-view" style="display:none;">
+                    <i class="fa-solid fa-user-shield"></i> PANEL DIRECTOR (ADMIN)
+                </button>
+            </div>
+
+            <!-- STATION QUICK SWITCHER BUTTONS -->
+            <div class="channel-selector-box">
+                <h4 class="box-title"><i class="fa-solid fa-sliders"></i> SINTONIZADOR DE EMISORAS</h4>
+                <div class="station-buttons-list" id="quick-stations">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <!-- STUDIO MONITORING GAUGE -->
+            <div class="studio-gauge-box">
+                <span class="gauge-title">FRECUENCIA DE SEÑAL</span>
+                <div class="signal-meter">
+                    <div class="meter-bar" style="width: 85%;"></div>
+                </div>
+                <div class="gauge-info">
+                    <span>AUDIO HD // VIDEO 1080p</span>
+                    <span id="live-clock">15:31:00</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN DISPLAY STAGE -->
+        <main class="console-main">
+
+            <!-- 1. VISTA MONITOR PRINCIPAL MTV BROADCAST -->
+            <section id="mtv-view" class="view-section active">
+                <div class="tv-stage-wrapper" id="mtv-screen-container">
+
+                    <!-- FILTRO RETRO CRT -->
+                    <div class="crt-overlay" id="crt-overlay"></div>
+
+                    <!-- LOGO AGUA MTV LIVE -->
+                    <div class="mtv-watermark">
+                        <div class="watermark-logo">MTV</div>
+                        <div class="watermark-live-badge"><i class="fa-solid fa-circle"></i> EN VIVO</div>
+                        <div class="watermark-station-name" id="mtv-current-station-name">ESTACIÓN ROCK</div>
+                    </div>
+
+                    <!-- REPRODUCTOR HÍBRIDO -->
+                    <div class="media-viewport">
+                        <video id="video-engine" class="video-display" playsinline></video>
+                        <canvas id="visualizer-canvas" class="canvas-display"></canvas>
+                        
+                        <div class="video-mode-badge" id="media-mode-badge">
+                            <i class="fa-solid fa-film"></i> REPRODUCIENDO VIDEOCLIP OFICIAL
+                        </div>
+                    </div>
+
+                    <!-- COMPONENTE MTV LOWER-THIRD BANNER -->
+                    <div class="mtv-lower-third" id="mtv-lower-third">
+                        <div class="mtv-lt-banner">
+                            <div class="mtv-lt-stripe"></div>
+                            <div class="mtv-lt-info">
+                                <div class="mtv-lt-top-tag">
+                                    <span class="lt-tag-channel">MTV MUSIC VIDEO</span>
+                                    <span class="lt-tag-station" id="lt-station">ROCK INDEPENDIENTE</span>
+                                </div>
+                                <h1 class="mtv-lt-song" id="lt-song">NOMBRE DE LA CANCIÓN</h1>
+                                <h2 class="mtv-lt-band" id="lt-band">NOMBRE DE LA BANDA</h2>
+                                <div class="mtv-lt-details">
+                                    <span id="lt-album"><i class="fa-solid fa-compact-disc"></i> Álbum</span>
+                                    <span id="lt-director"><i class="fa-solid fa-clapperboard"></i> Dir: Videoclip Oficial</span>
+                                    <span id="lt-year"><i class="fa-solid fa-calendar"></i> 2026</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CONTROLES FLOTANTES -->
+                    <div class="tv-overlay-tools">
+                        <button class="btn-tool" id="btn-toggle-media-mode" title="Alternar entre Videoclip y Visualizador Neón">
+                            <i class="fa-solid fa-atom"></i> <span id="lbl-media-toggle">Ver Visualizador</span>
+                        </button>
+                        <div class="vis-selector">
+                            <label for="vis-mode-select">Efecto Visual:</label>
+                            <select id="vis-mode-select">
+                                <option value="bars">Barras Neón Spectrum</option>
+                                <option value="wave">Osciloscopio Cyber</option>
+                                <option value="particles">Túnel de Partículas</option>
+                                <option value="pulse">Pulsar Circular MTV</option>
+                            </select>
+                        </div>
+                        <button class="btn-tool" id="btn-fullscreen" title="Pantalla Completa">
+                            <i class="fa-solid fa-expand"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="broadcast-bottom-grid">
+                    <div class="band-spotlight-card">
+                        <div class="spotlight-thumb">
+                            <img id="mtv-big-cover" src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&q=80" alt="Band Cover">
+                        </div>
+                        <div class="spotlight-info">
+                            <span class="spotlight-badge" id="mtv-info-station-badge">EN TRANSMISIÓN</span>
+                            <h2 id="mtv-info-song-title">Cargando canción...</h2>
+                            <h3 id="mtv-info-band-name">Nombre de Banda</h3>
+                            <p id="mtv-info-band-bio">Cargando información sobre la banda...</p>
+                            <div class="spotlight-actions" id="mtv-info-socials">
+                                <!-- Dynamic social & video links -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="broadcast-queue-card">
+                        <h3><i class="fa-solid fa-list-check"></i> PROGRAMACIÓN EN ESTA EMISORA</h3>
+                        <div class="queue-items-wrapper" id="mtv-queue-list">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+
+            <!-- 2. VISTA PARRILLA DE ESTACIONES -->
+            <section id="stations-view" class="view-section">
+                <div class="console-hero">
+                    <div class="hero-tag"><i class="fa-solid fa-tower-broadcast"></i> EMISIONES EN DIRECTO</div>
+                    <h1>Elige una Estación y Sintoniza Videoclips e Indie Music</h1>
+                    <p>Las bandas se inscriben a nuestra red, suben sus canciones y sus videoclips oficiales se proyectan para todo el público.</p>
+                </div>
+
+                <div class="section-title-bar">
+                    <h2>Estaciones Disponibles en Cadena</h2>
+                </div>
+
+                <div class="stations-grid" id="stations-grid">
+                    <!-- Populated by JS -->
+                </div>
+            </section>
+
+
+            <!-- 3. VISTA DIRECTORIO Y VIDEOCLIPS -->
+            <section id="bands-view" class="view-section">
+                <div class="section-title-bar">
+                    <h2>Catálogo de Bandas & Videoclips Inscritos</h2>
+                    <div class="filter-controls">
+                        <label>Estación:</label>
+                        <select id="filter-station-select">
+                            <option value="all">Todas las Estaciones</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="bands-grid" id="bands-grid">
+                    <!-- Populated by JS -->
+                </div>
+            </section>
+
+
+            <!-- 4. VISTA FORMULARIO REGISTRO DE BANDA -->
+            <section id="register-view" class="view-section">
+                <div class="register-studio-card">
+                    <div class="register-header">
+                        <span class="badge-new"><i class="fa-solid fa-clapperboard"></i> CONVOCATORIA ABIERTA</span>
+                        <h2>Inscribe a tu Banda y Publica tu Videoclip en MTV</h2>
+                        <p>Sube tu canción (MP3/WAV), tu carátula de portada (JPG/PNG) y tu **Videoclip Oficial (MP4/WebM)**.</p>
+                    </div>
+
+                    <form id="band-register-form" class="studio-form">
+                        <div class="form-columns">
+                            <!-- COLUMNA 1: DATOS DE LA BANDA -->
+                            <div class="form-panel">
+                                <h3><i class="fa-solid fa-guitar"></i> 1. Ficha de la Banda</h3>
+                                
+                                <div class="form-field">
+                                    <label for="band-name">Nombre de la Banda o Artista *</label>
+                                    <input type="text" id="band-name" required placeholder="Ej: Los Neón Vanguardia">
+                                </div>
+
+                                <div class="form-field">
+                                    <label for="band-genre">Género / Estilo *</label>
+                                    <input type="text" id="band-genre" required placeholder="Ej: Rock Synth, Indie Pop, Post-Punk">
+                                </div>
+
+                                <div class="form-field">
+                                    <label for="target-station">Estación de Emisión Principal *</label>
+                                    <select id="target-station" required>
+                                        <!-- Dynamic options -->
+                                    </select>
+                                </div>
+
+                                <div class="form-field">
+                                    <label for="band-bio">Biografía / Reseña Corta</label>
+                                    <textarea id="band-bio" rows="3" placeholder="Reseña de la banda, ciudad de origen o influencias..."></textarea>
+                                </div>
+
+                                <div class="form-field">
+                                    <label for="band-instagram"><i class="fa-brands fa-instagram"></i> Instagram / Red Social</label>
+                                    <input type="text" id="band-instagram" placeholder="@tubandaoficial">
+                                </div>
+                            </div>
+
+                            <!-- COLUMNA 2: MUSICA, PORTADA JPG & VIDEOCLIP -->
+                            <div class="form-panel">
+                                <h3><i class="fa-solid fa-film"></i> 2. Canción, Foto JPG & Videoclip</h3>
+
+                                <div class="form-field">
+                                    <label for="song-title">Título de la Canción *</label>
+                                    <input type="text" id="song-title" required placeholder="Ej: Rayos de Neón en la Ciudad">
+                                </div>
+
+                                <div class="form-field">
+                                    <label for="song-album">Álbum / EP</label>
+                                    <input type="text" id="song-album" placeholder="Ej: Futuro Antiguo - EP">
+                                </div>
+
+                                <div class="form-field">
+                                    <label><i class="fa-solid fa-file-audio"></i> Archivo de Audio (MP3 / WAV) *</label>
+                                    <div class="custom-dropzone">
+                                        <i class="fa-solid fa-music"></i>
+                                        <span id="audio-file-name">Seleccionar archivo de audio</span>
+                                        <input type="file" id="song-file" accept="audio/*" required>
+                                    </div>
+                                </div>
+
+                                <div class="form-field">
+                                    <label><i class="fa-solid fa-image"></i> Carátula / Foto JPG de la Banda</label>
+                                    <div class="custom-dropzone dropzone-jpg">
+                                        <i class="fa-solid fa-file-image"></i>
+                                        <span id="cover-file-name">Subir imagen en JPG, JPEG o PNG</span>
+                                        <input type="file" id="cover-file" accept="image/jpeg,image/jpg,image/png,image/webp">
+                                    </div>
+                                </div>
+
+                                <div class="form-field">
+                                    <label><i class="fa-solid fa-video"></i> Videoclip Oficial (MP4 / WebM)</label>
+                                    <div class="custom-dropzone dropzone-video">
+                                        <i class="fa-solid fa-clapperboard"></i>
+                                        <span id="video-file-name">Subir archivo de Video Clip (Opcional)</span>
+                                        <input type="file" id="video-file" accept="video/mp4,video/webm">
+                                    </div>
+                                </div>
+
+                                <div class="form-field">
+                                    <label for="video-url-fallback">O Enlace Directo a Video (MP4 / YouTube URL)</label>
+                                    <input type="url" id="video-url-fallback" placeholder="https://ejemplo.com/videoclip.mp4">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- LIVE PREVIEW MTV BANNER -->
+                        <div class="form-preview-box">
+                            <h4>Vista Previa del Banner estilo MTV en Pantalla</h4>
+                            <div class="mtv-lower-third preview-static">
+                                <div class="mtv-lt-banner">
+                                    <div class="mtv-lt-stripe"></div>
+                                    <div class="mtv-lt-info">
+                                        <div class="mtv-lt-top-tag">
+                                            <span class="lt-tag-channel">MTV MUSIC VIDEO</span>
+                                            <span class="lt-tag-station" id="prev-station">ESTACIÓN SELECCIONADA</span>
+                                        </div>
+                                        <h1 class="mtv-lt-song" id="prev-song">TITULO DE TU CANCIÓN</h1>
+                                        <h2 class="mtv-lt-band" id="prev-band">NOMBRE DE TU BANDA</h2>
+                                        <div class="mtv-lt-details">
+                                            <span id="prev-album"><i class="fa-solid fa-compact-disc"></i> Álbum: Tu Álbum</span>
+                                            <span id="prev-genre"><i class="fa-solid fa-music"></i> Género</span>
+                                            <span><i class="fa-solid fa-calendar"></i> 2026</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-submit-row">
+                            <button type="submit" class="btn btn-cyber-primary btn-xl" id="btn-submit-band">
+                                <i class="fa-solid fa-paper-plane"></i> PUBLICAR BANDA Y LANZAR VIDEOCLIP
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+
+            <!-- 5. PANEL DIRECTOR (ADMINISTRADOR MTV) -->
+            <section id="admin-view" class="view-section">
+                <div class="admin-dashboard-wrapper">
+                    <div class="admin-header-banner">
+                        <div class="admin-title">
+                            <i class="fa-solid fa-user-shield"></i>
+                            <div>
+                                <h2>PANEL DIRECTOR ADMINISTRADOR (MTV)</h2>
+                                <p>Control total sobre bandas inscritas, canciones subidas y parrilla de estaciones de emisión.</p>
+                            </div>
+                        </div>
+                        <div class="admin-stats-summary">
+                            <div class="stat-pill"><span id="admin-total-bands">0</span> Bandas Registradas</div>
+                            <div class="stat-pill"><span id="admin-total-songs">0</span> Canciones / Videos</div>
+                        </div>
+                    </div>
+
+                    <!-- TABLA 1: TODAS LAS BANDAS INSCRITAS -->
+                    <div class="admin-card-section">
+                        <div class="admin-section-title">
+                            <h3><i class="fa-solid fa-guitar"></i> REGISTRO DE BANDAS INSCRITAS</h3>
+                            <span class="badge-admin">VISTA ADMINISTRADOR</span>
+                        </div>
+                        <div class="table-container">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>Portada (JPG)</th>
+                                        <th>Nombre de Banda</th>
+                                        <th>Género</th>
+                                        <th>Estación Asignada</th>
+                                        <th>Instagram</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-bands-table-body">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- TABLA 2: TODAS LAS CANCIONES Y VIDEOCLIPS SUBIDOS -->
+                    <div class="admin-card-section" style="margin-top: 24px;">
+                        <div class="admin-section-title">
+                            <h3><i class="fa-solid fa-compact-disc"></i> CATÁLOGO DE CANCIONES Y VIDEOCLIPS SUBIDOS</h3>
+                            <span class="badge-admin">VISTA ADMINISTRADOR</span>
+                        </div>
+                        <div class="table-container">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>Canción</th>
+                                        <th>Banda</th>
+                                        <th>Álbum</th>
+                                        <th>Contenido multimedia</th>
+                                        <th>Estación</th>
+                                        <th>Acciones Director</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-songs-table-body">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- CREADOR DE ESTACIONES DESDE ADMIN -->
+                    <div class="admin-card-section" style="margin-top: 24px;">
+                        <div class="admin-section-title">
+                            <h3><i class="fa-solid fa-plus-circle"></i> CREAR NUEVA ESTACIÓN DE RADIO</h3>
+                        </div>
+                        <form id="admin-add-station-form" class="admin-inline-form">
+                            <input type="text" id="new-station-id" placeholder="ID (ej: metal-under)" required>
+                            <input type="text" id="new-station-name" placeholder="Nombre Estación (ej: MTV Heavy Metal)" required>
+                            <input type="text" id="new-station-genre" placeholder="Género (ej: Heavy / Thrash Metal)" required>
+                            <input type="text" id="new-station-desc" placeholder="Descripción corta" required>
+                            <button type="submit" class="btn btn-cyber-primary"><i class="fa-solid fa-plus"></i> CREAR ESTACIÓN</button>
+                        </form>
+                    </div>
+
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- PERSISTENT STUDIO MIXER PLAYER BAR -->
+    <footer class="studio-player-deck">
+        <div class="deck-track-info">
+            <img id="player-thumb" src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100&q=80" alt="Track Thumb">
+            <div class="deck-text">
+                <span class="deck-song" id="player-song-title">Sin Emisión</span>
+                <span class="deck-band" id="player-band-name">Selecciona una estación</span>
+                <span class="deck-badge" id="player-station-badge">ESTADO: STANDBY</span>
+            </div>
+        </div>
+
+        <div class="deck-controls-center">
+            <div class="deck-buttons">
+                <button class="deck-btn" id="btn-prev-track"><i class="fa-solid fa-backward-step"></i></button>
+                <button class="deck-btn btn-main-play" id="btn-play-pause"><i class="fa-solid fa-play"></i></button>
+                <button class="deck-btn" id="btn-next-track"><i class="fa-solid fa-forward-step"></i></button>
+                <button class="deck-btn toggle-active" id="btn-radio-mode" title="Emisión Continua Activa"><i class="fa-solid fa-rotate"></i></button>
+            </div>
+            <div class="deck-progress">
+                <span id="time-current">0:00</span>
+                <div class="progress-track" id="progress-wrapper">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                <span id="time-total">0:00</span>
+            </div>
+        </div>
+
+        <div class="deck-tools-right">
+            <div class="deck-vol">
+                <i class="fa-solid fa-volume-high" id="vol-icon"></i>
+                <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.8">
+            </div>
+        </div>
+    </footer>
+
+    <!-- Elemento Audio oculto -->
+    <audio id="audio-engine" crossorigin="anonymous"></audio>
+
+    <!-- Scripts JavaScript -->
+    <script src="js/db.js"></script>
+    <script src="js/visualizer.js"></script>
+    <script src="js/mtvPlayer.js"></script>
+    <script src="js/bandRegistration.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
